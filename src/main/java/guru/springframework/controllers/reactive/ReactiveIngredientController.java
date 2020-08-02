@@ -1,4 +1,4 @@
-package guru.springframework.controllers;
+package guru.springframework.controllers.reactive;
 
 import guru.springframework.commands.IngredientCommand;
 import guru.springframework.commands.RecipeCommand;
@@ -8,9 +8,9 @@ import guru.springframework.converters.IngredientToIngredientCommand;
 import guru.springframework.converters.UnitOfMeasureCommandToUnitOfMeasure;
 import guru.springframework.converters.UnitOfMeasureToUnitOfMeasureCommand;
 import guru.springframework.domain.Ingredient;
-import guru.springframework.services.IngredientService;
 import guru.springframework.services.RecipeService;
-import guru.springframework.services.UnitOfMeasureService;
+import guru.springframework.services.reactive.ReactiveIngredientService;
+import guru.springframework.services.reactive.ReactiveUnitOfMeasureService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Controller;
@@ -25,21 +25,21 @@ import org.springframework.web.bind.annotation.PostMapping;
  */
 @Slf4j
 @Controller
-@Profile("nonreactive")
-public class IngredientController {
+@Profile({"reactive", "default"})
+public class ReactiveIngredientController {
 
-    private final IngredientService ingredientService;
+    private final ReactiveIngredientService reactiveIngredientService;
     private final RecipeService recipeService;
-    private final UnitOfMeasureService unitOfMeasureService;
+    private final ReactiveUnitOfMeasureService reactiveUnitOfMeasureService;
     private final IngredientCommandToIngredient ingredientCommandToIngredient;
     private final UnitOfMeasureCommandToUnitOfMeasure unitOfMeasureCommandToUnitOfMeasure;
     private final IngredientToIngredientCommand ingredientToIngredientCommand;
     private final UnitOfMeasureToUnitOfMeasureCommand unitOfMeasureToUnitOfMeasureCommand;
 
-    public IngredientController(IngredientService ingredientService, RecipeService recipeService, UnitOfMeasureService unitOfMeasureService) {
-        this.ingredientService = ingredientService;
+    public ReactiveIngredientController(ReactiveIngredientService reactiveIngredientService, RecipeService recipeService, ReactiveUnitOfMeasureService reactiveUnitOfMeasureService) {
+        this.reactiveIngredientService = reactiveIngredientService;
         this.recipeService = recipeService;
-        this.unitOfMeasureService = unitOfMeasureService;
+        this.reactiveUnitOfMeasureService = reactiveUnitOfMeasureService;
         unitOfMeasureCommandToUnitOfMeasure = new UnitOfMeasureCommandToUnitOfMeasure();
         ingredientCommandToIngredient = new IngredientCommandToIngredient(unitOfMeasureCommandToUnitOfMeasure);
         unitOfMeasureToUnitOfMeasureCommand = new UnitOfMeasureToUnitOfMeasureCommand();
@@ -59,7 +59,7 @@ public class IngredientController {
     @GetMapping("recipe/{recipeId}/ingredient/{id}/show")
     public String showRecipeIngredient(@PathVariable String recipeId,
                                        @PathVariable String id, Model model){
-        model.addAttribute("ingredient", ingredientService.findByRecipeIdAndIngredientId(recipeId, id));
+        model.addAttribute("ingredient", reactiveIngredientService.findByRecipeIdAndIngredientId(recipeId, id).block());
         return "recipe/ingredient/show";
     }
 
@@ -71,17 +71,17 @@ public class IngredientController {
         //todo raise exception if null
 
         //need to return back parent id for hidden form property
-        //IngredientCommand ingredientCommand = new IngredientCommand();
         Ingredient ingredient = new Ingredient();
         IngredientCommand ingredientCommand = ingredientToIngredientCommand.convert(ingredient);
-        //ingredientCommand.setId(recipeCommand.getId());
         ingredientCommand.setRecipeId(recipeId);
         model.addAttribute("ingredient", ingredientCommand);
 
         //init uom
         ingredientCommand.setUom(new UnitOfMeasureCommand());
 
-        model.addAttribute("uomList",  unitOfMeasureService.listAllUoms());
+        // here is the change for reactive UOM
+
+        model.addAttribute("uomList",  reactiveUnitOfMeasureService.listAllUoms().collectList().block());
 
         return "recipe/ingredient/ingredientform";
     }
@@ -89,15 +89,15 @@ public class IngredientController {
     @GetMapping("recipe/{recipeId}/ingredient/{id}/update")
     public String updateRecipeIngredient(@PathVariable String recipeId,
                                          @PathVariable String id, Model model){
-        model.addAttribute("ingredient", ingredientService.findByRecipeIdAndIngredientId(recipeId, id));
+        model.addAttribute("ingredient", reactiveIngredientService.findByRecipeIdAndIngredientId(recipeId, id));
 
-        model.addAttribute("uomList", unitOfMeasureService.listAllUoms());
+        model.addAttribute("uomList", reactiveUnitOfMeasureService.listAllUoms().collectList().block());
         return "recipe/ingredient/ingredientform";
     }
 
     @PostMapping("recipe/{recipeId}/ingredient")
     public String saveOrUpdate(@ModelAttribute IngredientCommand command){
-        IngredientCommand savedCommand = ingredientService.saveIngredientCommand(command);
+        IngredientCommand savedCommand = reactiveIngredientService.saveIngredientCommand(command).block();
 
         log.debug("saved ingredient id:" + savedCommand.getId());
 
@@ -109,7 +109,7 @@ public class IngredientController {
                                    @PathVariable String id){
 
         log.debug("deleting ingredient id:" + id);
-        ingredientService.deleteById(recipeId, id);
+        reactiveIngredientService.deleteById(recipeId, id);
 
         return "redirect:/recipe/" + recipeId + "/ingredients";
     }
