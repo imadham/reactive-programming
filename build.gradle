@@ -9,8 +9,8 @@ buildscript {
 	}
 	dependencies {
 		classpath("org.springframework.boot:spring-boot-gradle-plugin:${springBootVersion}")
-		compileOnly 'org.projectlombok:lombok'
-		annotationProcessor 'org.projectlombok:lombok'
+//		compileOnly 'org.projectlombok:lombok'
+//		annotationProcessor 'org.projectlombok:lombok'
 	}
 }
 
@@ -44,6 +44,11 @@ dependencies {
 	testCompile('org.springframework.boot:spring-boot-starter-test')
 	testCompile('io.projectreactor:reactor-test')
 
+}
+
+lombok {
+	version = "1.16.18"
+	sha256 = ""
 }
 
 //export test coverage
