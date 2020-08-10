@@ -39,13 +39,14 @@
 
                                 <div class="col-md-3 form-group">
                                     <label>Amount:</label>
-                                    <input type="number" class="form-control" th:field="*{amount}"/>
+                                    <input type="number" class="form-control" th:field="*{amount}" id="amountid"/>
                                 </div>
 
                                 <div class="col-md-3 form-group">
                                     <label>UOM:</label>
                                     <select class="form-control" name="uom.id">
-                                        <option th:each="uomEach : ${uomList}"
+                                        <option name="selecteduom"
+                                                th:each="uomEach : ${uomList}"
                                                 th:value="${uomEach.id}"
                                                 th:selected="${uomEach.id.equals(ingredient.uom.id)}"
                                                 th:text="${uomEach.description}">Each</option>

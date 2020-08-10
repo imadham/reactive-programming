@@ -1,9 +1,9 @@
-package guru.springframework.controllers;
+package guru.springframework.controllers.reactive;
 
 import guru.springframework.commands.RecipeCommand;
 import guru.springframework.exceptions.NotFoundException;
 import guru.springframework.services.RecipeService;
-import lombok.Builder;
+import guru.springframework.services.reactive.ReactiveRecipeService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Profile;
 import org.springframework.http.HttpStatus;
@@ -20,20 +20,20 @@ import javax.validation.Valid;
  */
 @Slf4j
 @Controller
-@Profile("nonreactive")
-public class RecipeController {
+@Profile({"reactive", "default"})
+public class ReactiveRecipeController {
 
     private static final String RECIPE_RECIPEFORM_URL = "recipe/recipeform";
-    private final RecipeService recipeService;
+    private final ReactiveRecipeService reactiveRecipeService;
 
-    public RecipeController(RecipeService recipeService) {
-        this.recipeService = recipeService;
+    public ReactiveRecipeController(ReactiveRecipeService reactiveRecipeService) {
+        this.reactiveRecipeService = reactiveRecipeService;
     }
 
     @GetMapping("/recipe/{id}/show")
     public String showById(@PathVariable String id, Model model){
 
-        model.addAttribute("recipe", recipeService.findById(id));
+        model.addAttribute("recipe", reactiveRecipeService.findById(id).block());
 
         return "recipe/show";
     }
@@ -47,7 +47,7 @@ public class RecipeController {
 
     @GetMapping("recipe/{id}/update")
     public String updateRecipe(@PathVariable String id, Model model){
-        model.addAttribute("recipe", recipeService.findCommandById(id));
+        model.addAttribute("recipe", reactiveRecipeService.findCommandById(id));
         return RECIPE_RECIPEFORM_URL;
     }
 
@@ -63,7 +63,7 @@ public class RecipeController {
             return RECIPE_RECIPEFORM_URL;
         }
 
-        RecipeCommand savedCommand = recipeService.saveRecipeCommand(command);
+        RecipeCommand savedCommand = reactiveRecipeService.saveRecipeCommand(command).block();
 
         return "redirect:/recipe/" + savedCommand.getId() + "/show";
     }
@@ -73,7 +73,7 @@ public class RecipeController {
 
         log.debug("Deleting id: " + id);
 
-        recipeService.deleteById(id);
+        reactiveRecipeService.deleteById(id);
         return "redirect:/";
     }
 

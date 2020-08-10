@@ -1,4 +1,4 @@
-package guru.springframework.controllers;
+package guru.springframework.controllers.reactive;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Profile;
@@ -13,8 +13,8 @@ import org.springframework.web.servlet.ModelAndView;
  */
 @Slf4j
 @ControllerAdvice
-@Profile("nonreactive")
-public class ControllerExceptionHandler {
+@Profile({"reactive", "default"})
+public class ReactiveControllerExceptionHandler {
 
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     @ExceptionHandler(NumberFormatException.class)

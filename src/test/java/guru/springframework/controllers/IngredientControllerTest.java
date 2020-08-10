@@ -2,6 +2,8 @@ package guru.springframework.controllers;
 
 import guru.springframework.commands.IngredientCommand;
 import guru.springframework.commands.RecipeCommand;
+import guru.springframework.commands.UnitOfMeasureCommand;
+import guru.springframework.domain.UnitOfMeasure;
 import guru.springframework.services.IngredientService;
 import guru.springframework.services.RecipeService;
 import guru.springframework.services.UnitOfMeasureService;
@@ -14,6 +16,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 import java.util.HashSet;
+import java.util.Set;
 
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
@@ -119,15 +122,22 @@ public class IngredientControllerTest {
         IngredientCommand command = new IngredientCommand();
         command.setId("3");
         command.setRecipeId("2");
+        UnitOfMeasureCommand uom = new UnitOfMeasureCommand();
+        uom.setId("4");
+        command.setUom(uom);
+        Set<UnitOfMeasureCommand> uomSet = new HashSet<>();
+        uomSet.add(uom);
 
         //when
         when(ingredientService.saveIngredientCommand(any())).thenReturn(command);
+        when(unitOfMeasureService.listAllUoms()).thenReturn(uomSet);
 
         //then
         mockMvc.perform(post("/recipe/2/ingredient")
                 .contentType(MediaType.APPLICATION_FORM_URLENCODED)
                 .param("id", "")
                 .param("description", "some string")
+                .param("uom.id","4")
         )
                 .andExpect(status().is3xxRedirection())
                 .andExpect(view().name("redirect:/recipe/2/ingredient/3/show"));

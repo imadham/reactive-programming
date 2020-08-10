@@ -57,7 +57,7 @@ public class ReactiveIngredientServiceImplTest {
     }
 
     @Test
-    public void findByRecipeIdAndReceipeIdHappyPath() throws Exception {
+    public void findByRecipeIdAndRecipeIdHappyPath() throws Exception {
         //given
         Recipe recipe = new Recipe();
         recipe.setId("1");
@@ -74,7 +74,6 @@ public class ReactiveIngredientServiceImplTest {
         recipe.addIngredient(ingredient1);
         recipe.addIngredient(ingredient2);
         recipe.addIngredient(ingredient3);
-        Optional<Recipe> recipeOptional = Optional.of(recipe);
 
         when(recipeReactiveRepository.findById(anyString())).thenReturn(Mono.just(recipe));
 
@@ -93,8 +92,6 @@ public class ReactiveIngredientServiceImplTest {
         IngredientCommand command = new IngredientCommand();
         command.setId("3");
         command.setRecipeId("2");
-
-        Optional<Recipe> recipeOptional = Optional.of(new Recipe());
 
         Recipe savedRecipe = new Recipe();
         savedRecipe.addIngredient(new Ingredient());
@@ -121,7 +118,6 @@ public class ReactiveIngredientServiceImplTest {
         ingredient.setId("3");
         recipe.addIngredient(ingredient);
         recipe.setId("1");
-        Optional<Recipe> recipeOptional = Optional.of(recipe);
 
         when(recipeReactiveRepository.findById(anyString())).thenReturn(Mono.just(recipe));
         when(recipeReactiveRepository.save(any(Recipe.class))).thenReturn(Mono.just(recipe));

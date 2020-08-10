@@ -96,7 +96,11 @@ public class IngredientController {
     }
 
     @PostMapping("recipe/{recipeId}/ingredient")
-    public String saveOrUpdate(@ModelAttribute IngredientCommand command){
+    public String saveOrUpdate(@ModelAttribute IngredientCommand command,@ModelAttribute("uom.id") String uom){
+
+        UnitOfMeasureCommand unitOfMeasureCommand1 = unitOfMeasureService.listAllUoms()
+                .stream().filter(unitOfMeasureCommand -> unitOfMeasureCommand.getId().equals(uom)).findFirst().get();
+        command.setUom(unitOfMeasureCommand1);
         IngredientCommand savedCommand = ingredientService.saveIngredientCommand(command);
 
         log.debug("saved ingredient id:" + savedCommand.getId());

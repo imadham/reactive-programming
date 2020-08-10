@@ -8,17 +8,18 @@ import guru.springframework.converters.IngredientToIngredientCommand;
 import guru.springframework.converters.UnitOfMeasureCommandToUnitOfMeasure;
 import guru.springframework.converters.UnitOfMeasureToUnitOfMeasureCommand;
 import guru.springframework.domain.Ingredient;
+import guru.springframework.domain.UnitOfMeasure;
 import guru.springframework.services.RecipeService;
 import guru.springframework.services.reactive.ReactiveIngredientService;
+import guru.springframework.services.reactive.ReactiveRecipeService;
 import guru.springframework.services.reactive.ReactiveUnitOfMeasureService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.ModelAttribute;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.*;
+
+import java.math.BigDecimal;
 
 /**
  * Created by jt on 6/28/17.
@@ -29,16 +30,16 @@ import org.springframework.web.bind.annotation.PostMapping;
 public class ReactiveIngredientController {
 
     private final ReactiveIngredientService reactiveIngredientService;
-    private final RecipeService recipeService;
+    private final ReactiveRecipeService reactiveRecipeService;
     private final ReactiveUnitOfMeasureService reactiveUnitOfMeasureService;
     private final IngredientCommandToIngredient ingredientCommandToIngredient;
     private final UnitOfMeasureCommandToUnitOfMeasure unitOfMeasureCommandToUnitOfMeasure;
     private final IngredientToIngredientCommand ingredientToIngredientCommand;
     private final UnitOfMeasureToUnitOfMeasureCommand unitOfMeasureToUnitOfMeasureCommand;
 
-    public ReactiveIngredientController(ReactiveIngredientService reactiveIngredientService, RecipeService recipeService, ReactiveUnitOfMeasureService reactiveUnitOfMeasureService) {
+    public ReactiveIngredientController(ReactiveIngredientService reactiveIngredientService, ReactiveRecipeService reactiveRecipeService, ReactiveUnitOfMeasureService reactiveUnitOfMeasureService) {
         this.reactiveIngredientService = reactiveIngredientService;
-        this.recipeService = recipeService;
+        this.reactiveRecipeService = reactiveRecipeService;
         this.reactiveUnitOfMeasureService = reactiveUnitOfMeasureService;
         unitOfMeasureCommandToUnitOfMeasure = new UnitOfMeasureCommandToUnitOfMeasure();
         ingredientCommandToIngredient = new IngredientCommandToIngredient(unitOfMeasureCommandToUnitOfMeasure);
@@ -51,7 +52,7 @@ public class ReactiveIngredientController {
         log.debug("Getting ingredient list for recipe id: " + recipeId);
 
         // use command object to avoid lazy load errors in Thymeleaf.
-        model.addAttribute("recipe", recipeService.findCommandById(recipeId));
+        model.addAttribute("recipe", reactiveRecipeService.findCommandById(recipeId));
 
         return "recipe/ingredient/list";
     }
@@ -67,7 +68,7 @@ public class ReactiveIngredientController {
     public String newRecipe(@PathVariable String recipeId, Model model){
 
         //make sure we have a good id value
-        RecipeCommand recipeCommand = recipeService.findCommandById(recipeId);
+        RecipeCommand recipeCommand = reactiveRecipeService.findCommandById(recipeId).block();
         //todo raise exception if null
 
         //need to return back parent id for hidden form property
@@ -89,14 +90,18 @@ public class ReactiveIngredientController {
     @GetMapping("recipe/{recipeId}/ingredient/{id}/update")
     public String updateRecipeIngredient(@PathVariable String recipeId,
                                          @PathVariable String id, Model model){
-        model.addAttribute("ingredient", reactiveIngredientService.findByRecipeIdAndIngredientId(recipeId, id));
+        model.addAttribute("ingredient", reactiveIngredientService.findByRecipeIdAndIngredientId(recipeId, id).block());
 
         model.addAttribute("uomList", reactiveUnitOfMeasureService.listAllUoms().collectList().block());
         return "recipe/ingredient/ingredientform";
     }
 
     @PostMapping("recipe/{recipeId}/ingredient")
-    public String saveOrUpdate(@ModelAttribute IngredientCommand command){
+    public String saveOrUpdate(@ModelAttribute IngredientCommand command,
+                               @ModelAttribute("uom.id") String uom){
+        UnitOfMeasureCommand unitOfMeasureCommand1 = reactiveUnitOfMeasureService.listAllUoms().collectList().block()
+                .stream().filter(unitOfMeasureCommand -> unitOfMeasureCommand.getId().equals(uom)).findFirst().get();
+        command.setUom(unitOfMeasureCommand1);
         IngredientCommand savedCommand = reactiveIngredientService.saveIngredientCommand(command).block();
 
         log.debug("saved ingredient id:" + savedCommand.getId());

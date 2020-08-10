@@ -8,6 +8,7 @@ import guru.springframework.services.IngredientService;
 import guru.springframework.services.RecipeService;
 import guru.springframework.services.UnitOfMeasureService;
 import guru.springframework.services.reactive.ReactiveIngredientService;
+import guru.springframework.services.reactive.ReactiveRecipeService;
 import guru.springframework.services.reactive.ReactiveUnitOfMeasureService;
 import org.junit.Before;
 import org.junit.Test;
@@ -20,6 +21,7 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import java.util.HashSet;
+import java.util.Set;
 
 import static org.junit.Assert.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -40,7 +42,7 @@ public class ReactiveIngredientControllerTest {
     ReactiveUnitOfMeasureService reactiveUnitOfMeasureService;
 
     @Mock
-    RecipeService recipeService;
+    ReactiveRecipeService reactiveRecipeService;
 
     ReactiveIngredientController controller;
 
@@ -50,7 +52,7 @@ public class ReactiveIngredientControllerTest {
     public void setUp() throws Exception {
         MockitoAnnotations.initMocks(this);
 
-        controller = new ReactiveIngredientController(reactiveIngredientService, recipeService, reactiveUnitOfMeasureService);
+        controller = new ReactiveIngredientController(reactiveIngredientService, reactiveRecipeService, reactiveUnitOfMeasureService);
         mockMvc = MockMvcBuilders.standaloneSetup(controller).build();
     }
 
@@ -58,7 +60,7 @@ public class ReactiveIngredientControllerTest {
     public void testListIngredients() throws Exception {
         //given
         RecipeCommand recipeCommand = new RecipeCommand();
-        when(recipeService.findCommandById(anyString())).thenReturn(recipeCommand);
+        when(reactiveRecipeService.findCommandById(anyString())).thenReturn(Mono.just(recipeCommand));
 
         //when
         mockMvc.perform(get("/recipe/1/ingredients"))
@@ -67,7 +69,7 @@ public class ReactiveIngredientControllerTest {
                 .andExpect(model().attributeExists("recipe"));
 
         //then
-        verify(recipeService, times(1)).findCommandById(anyString());
+        verify(reactiveRecipeService, times(1)).findCommandById(anyString());
     }
 
     @Test
@@ -92,7 +94,7 @@ public class ReactiveIngredientControllerTest {
         recipeCommand.setId("1");
 
         //when
-        when(recipeService.findCommandById(anyString())).thenReturn(recipeCommand);
+        when(reactiveRecipeService.findCommandById(anyString())).thenReturn(Mono.just(recipeCommand));
         when(reactiveUnitOfMeasureService.listAllUoms()).thenReturn(Flux.just(new UnitOfMeasureCommand()));
 
         //then
@@ -102,7 +104,7 @@ public class ReactiveIngredientControllerTest {
                 .andExpect(model().attributeExists("ingredient"))
                 .andExpect(model().attributeExists("uomList"));
 
-        verify(recipeService, times(1)).findCommandById(anyString());
+        verify(reactiveRecipeService, times(1)).findCommandById(anyString());
 
     }
 
@@ -129,15 +131,22 @@ public class ReactiveIngredientControllerTest {
         IngredientCommand command = new IngredientCommand();
         command.setId("3");
         command.setRecipeId("2");
+        UnitOfMeasureCommand uom = new UnitOfMeasureCommand();
+        uom.setId("4");
+        command.setUom(uom);
+        Set<UnitOfMeasureCommand> uomSet = new HashSet<>();
+        uomSet.add(uom);
 
         //when
         when(reactiveIngredientService.saveIngredientCommand(any())).thenReturn(Mono.just(command));
+        when(reactiveUnitOfMeasureService.listAllUoms()).thenReturn(Flux.fromStream(uomSet.stream()));
 
         //then
         mockMvc.perform(post("/recipe/2/ingredient")
                 .contentType(MediaType.APPLICATION_FORM_URLENCODED)
                 .param("id", "")
                 .param("description", "some string")
+                .param("uom.id","4")
         )
                 .andExpect(status().is3xxRedirection())
                 .andExpect(view().name("redirect:/recipe/2/ingredient/3/show"));

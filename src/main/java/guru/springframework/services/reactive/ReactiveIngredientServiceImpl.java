@@ -48,31 +48,16 @@ public class ReactiveIngredientServiceImpl implements ReactiveIngredientService 
                     command.setRecipeId(recipeId);
                     return command;
                 });
-
-//        Recipe recipeOptional = recipeReactiveRepository.findById(recipeId).block();
-//        Recipe recipe = recipeOptional;
-//        Optional<IngredientCommand> ingredientCommandOptional = recipe.getIngredients().stream()
-//                .filter(ingredient -> ingredient.getId().equals(ingredientId))
-//                .map( ingredient -> ingredientToIngredientCommand.convert(ingredient)).findFirst();
-//
-//        if(!ingredientCommandOptional.isPresent()){
-//            //todo impl error handling
-//            log.error("Ingredient id not found: " + ingredientId);
-//            return Mono.empty();
-//        }else{
-//        IngredientCommand ingredientCommand = ingredientCommandOptional.get();
-//        ingredientCommand.setRecipeId(recipe.getId());
-//
-//        return Mono.just(ingredientCommandOptional.get());
-//    }}
     }
 
     @Override
     public Mono<IngredientCommand> saveIngredientCommand(IngredientCommand command) {
-        Recipe recipeOptional = recipeReactiveRepository.findById(command.getRecipeId()).block();
+        Recipe recipe = recipeReactiveRepository.findById(command.getRecipeId()).block();
 
-
-            Recipe recipe = recipeOptional;
+        if (recipe == null) {
+            //todo error
+            return Mono.just(new IngredientCommand());
+        } else {
 
             Optional<Ingredient> ingredientOptional = recipe
                     .getIngredients()
@@ -80,7 +65,7 @@ public class ReactiveIngredientServiceImpl implements ReactiveIngredientService 
                     .filter(ingredient -> ingredient.getId().equals(command.getId()))
                     .findFirst();
 
-            if(ingredientOptional.isPresent()){
+            if (ingredientOptional.isPresent()) {
                 Ingredient ingredientFound = ingredientOptional.get();
                 ingredientFound.setDescription(command.getDescription());
                 ingredientFound.setAmount(command.getAmount());
@@ -89,7 +74,7 @@ public class ReactiveIngredientServiceImpl implements ReactiveIngredientService 
             } else {
                 //add new Ingredient
                 Ingredient ingredient = ingredientCommandToIngredient.convert(command);
-              //  ingredient.setRecipe(recipe);
+                //  ingredient.setRecipe(recipe);
                 recipe.addIngredient(ingredient);
             }
 
@@ -100,7 +85,7 @@ public class ReactiveIngredientServiceImpl implements ReactiveIngredientService 
                     .findFirst();
 
             //check by description
-            if(!savedIngredientOptional.isPresent()){
+            if (!savedIngredientOptional.isPresent()) {
                 //not totally safe... But best guess
                 savedIngredientOptional = savedRecipe.getIngredients().stream()
                         .filter(recipeIngredients -> recipeIngredients.getDescription().equals(command.getDescription()))
@@ -118,6 +103,7 @@ public class ReactiveIngredientServiceImpl implements ReactiveIngredientService 
             return Mono.just(ingredientCommandSaved);
 
 
+        }
     }
 
     @Override
@@ -125,10 +111,10 @@ public class ReactiveIngredientServiceImpl implements ReactiveIngredientService 
 
         log.debug("Deleting ingredient: " + recipeId + ":" + idToDelete);
 
-        Recipe recipeOptional = recipeReactiveRepository.findById(recipeId).block();
+        Recipe recipe = recipeReactiveRepository.findById(recipeId).block();
 
 
-            Recipe recipe = recipeOptional;
+        if(recipe != null){
             log.debug("found recipe");
 
             Optional<Ingredient> ingredientOptional = recipe
@@ -144,6 +130,9 @@ public class ReactiveIngredientServiceImpl implements ReactiveIngredientService 
                 recipe.getIngredients().remove(ingredientOptional.get());
                 recipeReactiveRepository.save(recipe).block();
             }
+        }else {
+            log.debug("can't find recipe");
+        }
 
         return Mono.empty();
     }
